@@ -1,0 +1,6 @@
+domain: k-ngrok.io
+layout:
+- go.kubebuilder.io/v3
+projectName: kngrok
+repo: github.com/prksu/kngrok
+version: "3"
