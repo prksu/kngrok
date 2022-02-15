@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-app
+spec:
+  selector:
+    matchLabels:
+      app: hello-app
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: hello-app
+    spec:
+      containers:
+      - name: hello-1
+        image: "us-docker.pkg.dev/google-samples/containers/gke/hello-app:1.0"
+        ports:
+          - containerPort: 8080
+      - name: hello-2
+        env:
+          - name: PORT
+            value: "8081"
+        image: "us-docker.pkg.dev/google-samples/containers/gke/hello-app:2.0"
+        ports:
+          - containerPort: 8081
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-app-lb
+spec:
+  type: LoadBalancer
+  selector:
+    app: hello-app
+  loadBalancerClass: k-ngrok.io/default
+  allocateLoadBalancerNodePorts: false
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+    name: hello-1
+  - protocol: TCP
+    port: 8081
+    targetPort: 8081
+    name: hello-2

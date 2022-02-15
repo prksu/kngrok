@@ -30,7 +30,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	// +kubebuilder:scaffold:imports
+
+	"github.com/prksu/kngrok/controllers"
+	"github.com/prksu/kngrok/webhooks"
+	// +kubebuilder::scaffold:imports
 )
 
 var (
@@ -41,18 +44,22 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	// +kubebuilder:scaffold:scheme
+	// +kubebuilder::scaffold:scheme
 }
 
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	var serviceLoadBalancerClass string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.StringVar(&serviceLoadBalancerClass, "service-loadbalancer-class", "k-ngrok.io/default",
+		"The service LoadBalancer class name the controller watch to. "+
+			"Must be a label-style identifier, with an optional prefix.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -74,7 +81,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	// +kubebuilder:scaffold:builder
+	if err = (&controllers.ServiceReconciler{
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		Recorder:          mgr.GetEventRecorderFor(controllers.ControllerName),
+		LoadBalancerClass: serviceLoadBalancerClass,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Service")
+		os.Exit(1)
+	}
+	if err = (&webhooks.ServiceWebhook{
+		Client:            mgr.GetAPIReader(),
+		LoadBalancerClass: serviceLoadBalancerClass,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "Service")
+		os.Exit(1)
+	}
+	// +kubebuilder::scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")

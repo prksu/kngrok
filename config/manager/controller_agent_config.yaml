@@ -1,0 +1,9 @@
+region: us
+console_ui: false
+http_proxy: false
+inspect_db_size: 50000000
+log: stdout
+log_level: debug
+update: false
+update_channel: stable
+web_addr: 127.0.0.1:4040

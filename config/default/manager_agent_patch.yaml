@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: manager
+  namespace: system
+spec:
+  template:
+    spec:
+      containers:
+      - name: agent
+        image: docker.io/ngrok/ngrok
+        env:
+        - name: NGROK_AUTHTOKEN
+          valueFrom:
+            secretKeyRef:
+              name: agent-secret
+              key: authtoken
+        args:
+        - "start"
+        - "--config=/ngrok.yaml"
+        - "--none"
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 5m
+            memory: 64Mi
+        volumeMounts:
+        - name: agent-config
+          mountPath: /ngrok.yaml
+          subPath: ngrok.yaml
+      volumes:
+      - name: agent-config
+        configMap:
+          name: agent-config
